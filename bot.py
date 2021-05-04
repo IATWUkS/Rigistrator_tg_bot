@@ -261,6 +261,7 @@ def callback_query(call):
         if answer == 400:
             bot.send_message(call.message.chat.id, 'Статус для пользователя ' + str(
                 id_tg) + ' не был изменён. Т.к он уже имеет данный статус.', reply_markup=kb)
+    # Рассылка
     if call.data == 'mailing':
         kb = InlineKeyboardMarkup()
         all_user = InlineKeyboardButton('Всем участникам', callback_data='all_user')
@@ -276,14 +277,14 @@ def callback_query(call):
         list_all_data_company = db_bot.get_organization_info()
         for names in list_all_data_company:
             kb = InlineKeyboardMarkup()
-            select = InlineKeyboardButton('Выбрать', callback_data=names['name'])
-            data_admin.list_all_data_company.append(names['name'])
+            select = InlineKeyboardButton('Выбрать', callback_data='company_' + names['name'])
+            data_admin.list_all_data_company.append('company_' + names['name'])
             kb.add(select)
             bot.send_message(call.message.chat.id, 'Названия организации: ' + names['name'] + '\nФИО Директора: ' + names[
                 'FIO_director'] + '\nАдрес: ' + names['adress'] + '\nНомер телефона: ' + names['number'] + '\nEMAIL: ' +
                              names['email'], reply_markup=kb)
     if call.data in data_admin.list_all_data_company:
-        name_organization = call.data
+        name_organization = call.data.split('_')[1]
         msg = bot.send_message(call.message.chat.id, 'Введите сообщение:')
         bot.register_next_step_handler(msg, mailing_organization, name_organization)
 
