@@ -210,3 +210,16 @@ def get_id_tg_all_user():
         return data
     except:
         return None
+
+
+def get_organization_info_select_company(company):
+    connection = get_conn()
+    try:
+        cursor = connection.cursor()
+        sql = 'SELECT * FROM adm_organization WHERE name = "%s"' % company
+        cursor.execute(sql)
+        data = cursor.fetchone()
+        connection.close()
+        return data
+    except:
+        return None

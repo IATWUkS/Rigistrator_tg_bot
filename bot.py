@@ -21,6 +21,11 @@ class data_admin:
     list_edit_status_on_the_accept = []
     list_edit_status_on_the_ban = []
     list_all_data_company = []
+    list_user_id = []
+    list_next_page_cout = []
+    list_last_page_cout = []
+    list_next_page_cout_user = []
+    list_last_page_cout_user = []
 
 
 @bot.message_handler(commands=['start'])
@@ -63,6 +68,34 @@ def message_handler(message):
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
+    if call.data == 'menu':
+        check_profile = db_bot.get_admin(call.message.chat.id)
+        try:
+            if int(check_profile[0]) == call.message.chat.id:
+                # Интерфейс админа 1 уровня, своей организации.
+                if int(check_profile[3]) == 1:
+                    kb = InlineKeyboardMarkup()
+                    view = InlineKeyboardButton('Просмотреть заявки', callback_data='view_anket')
+                    kb.add(view)
+                    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=
+                                     'Привет, ' + check_profile[1] + '.\nВы администратор компании: ' + check_profile[
+                                         2],
+                                     reply_markup=kb)
+                    data_admin.company[str(call.message.chat.id)] = check_profile[2]
+                # Интерфейс главного админа, может обработать любые заявки.
+                if int(check_profile[3]) == 2:
+                    kb = InlineKeyboardMarkup()
+                    view = InlineKeyboardButton('Просмотреть заявки', callback_data='view_anket_adm2')
+                    view_organization = InlineKeyboardButton('Просмотреть список организаций',
+                                                             callback_data='view_organization')
+                    mailing = InlineKeyboardButton('Рассылка', callback_data='mailing')
+                    kb.add(view, view_organization)
+                    kb.add(mailing)
+                    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,     text=
+                                     'Привет, ' + check_profile[1] + '.\nВы администратор верхнего уровня.',
+                                     reply_markup=kb)
+        except:
+            pass
     # Регистрация нового пользователя
     if call.data == 'registration':
         check = db_bot.check_account(call.message.chat.id)
@@ -81,17 +114,25 @@ def callback_query(call):
             bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=answer[1])
     # Работа с заявками админа своей организации
     if call.data == 'view_anket':
+        kb = InlineKeyboardMarkup()
+        menu = InlineKeyboardButton('меню', callback_data='menu')
+        kb.add(menu)
         data = db_bot.get_info_anket(data_admin.company[str(call.message.chat.id)])
         if str(data) == '()':
-            bot.send_message(call.message.chat.id, 'У вас пока нет больше активных заявок.')
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='У вас пока '
+                                                                                                         'нет больше '
+                                                                                                         'активных '
+                                                                                                         'заявок.', reply_markup=kb)
         try:
             for data_anket in data:
                 kb = InlineKeyboardMarkup()
                 accept = InlineKeyboardButton('Принять', callback_data='accept_' + str(data_anket['id_tg']))
                 cancel = InlineKeyboardButton('Отклонить', callback_data='cancel_' + str(data_anket['id_tg']))
+                menu = InlineKeyboardButton('Меню', callback_data='menu')
                 data_admin.accept_list.append('accept_' + str(data_anket['id_tg']))
                 data_admin.cancel_list.append('cancel_' + str(data_anket['id_tg']))
                 kb.add(accept, cancel)
+                kb.add(menu)
                 bot.send_message(call.message.chat.id,
                                  'Имя: ' + data_anket['name'] + '\nФамилия: ' + data_anket['surname'] + '\nПочта: ' +
                                  data_anket['email'] + '\nКомпания: ' + data_anket['company'] + '\nДолжность: ' +
@@ -99,6 +140,9 @@ def callback_query(call):
         except:
             bot.send_message(call.message.chat.id, 'У вас пока нет больше активных заявок.')
     if call.data in data_admin.accept_list:
+        kb = InlineKeyboardMarkup()
+        menu = InlineKeyboardButton('Меню', callback_data='menu')
+        kb.add(menu)
         id_tg = call.data.split('_')[1]
         status = db_bot.edit_status('Утверждён', id_tg)
         name_user = db_bot.get_name(id_tg)
@@ -106,30 +150,35 @@ def callback_query(call):
             login_bitrix = name_user[1].split('@')[0]
             password_bitrix = str(random.randint(1000000, 99999999))
             bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                  text='Пользователь ' + name_user[0] + ' был успешно утверждён.')
+                                  text='Пользователь ' + name_user[0] + ' был успешно утверждён.', reply_markup=kb)
             bot.send_message(id_tg, 'Ваша учетная запись активирована, ссылка для входа: '
                                     'https://проект24.онлайн\nЛогин: ' + login_bitrix + '\nПароль: ' +
                              password_bitrix + '\nВ случае возникновения вопросов сообщите на '
                                                'почту: ваша почта.')
             db_bot.set_login_password_user_in_bitrix(login_bitrix, password_bitrix, id_tg)
         if status == 400:
-            bot.send_message(call.message.chat.id, 'Ошибка утверждения пользователя ' + name_user[0])
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Ошибка утверждения пользователя ' + name_user[0], reply_markup=kb)
     if call.data in data_admin.cancel_list:
+        kb = InlineKeyboardMarkup()
+        menu = InlineKeyboardButton('Меню', callback_data='menu')
+        kb.add(menu)
         id_tg = call.data.split('_')[1]
         status = db_bot.edit_status('Исключён', id_tg)
         name_user = db_bot.get_name(id_tg)
         if status == 200:
-            bot.send_message(call.message.chat.id, 'Пользователь ' + name_user[0] + ' был успешно исключён.')
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Пользователь ' + name_user[0] + ' был успешно исключён.', reply_markup=kb)
         if status == 400:
-            bot.send_message(call.message.chat.id, 'Ошибка исключенния пользователя ' + name_user[0])
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Ошибка исключенния пользователя ' + name_user[0], reply_markup=kb)
     # Работа с анкетами главного админа
     if call.data == 'view_anket_adm2':
+        kb = InlineKeyboardMarkup()
+        menu = InlineKeyboardButton('Меню', callback_data='menu')
+        kb.add(menu)
         data = db_bot.get_info_anket_admin2()
         if str(data) == '()':
-            bot.send_message(call.message.chat.id, 'У вас пока нет больше активных заявок.')
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='У вас пока нет больше активных заявок.', reply_markup=kb)
         try:
             for data_anket in data:
-                kb = InlineKeyboardMarkup()
                 accept = InlineKeyboardButton('Принять', callback_data='accept_' + str(data_anket['id_tg']))
                 cancel = InlineKeyboardButton('Отклонить', callback_data='cancel_' + str(data_anket['id_tg']))
                 data_admin.accept_list.append('accept_' + str(data_anket['id_tg']))
@@ -140,41 +189,178 @@ def callback_query(call):
                                  data_anket['email'] + '\nКомпания: ' + data_anket['company'] + '\nДолжность: ' +
                                  data_anket['position'] + '\nТелефон: ' + data_anket['number'], reply_markup=kb)
         except:
-            bot.send_message(call.message.chat.id, 'У вас пока нет больше активных заявок.')
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='У вас пока нет больше активных заявок.', reply_markup=kb)
     if call.data in data_admin.accept_list:
+        kb = InlineKeyboardMarkup()
+        menu = InlineKeyboardButton('Меню', callback_data='menu')
+        kb.add(menu)
         id_tg = call.data.split('_')[1]
         status = db_bot.edit_status('Утверждён', id_tg)
         name_user = db_bot.get_name(id_tg)
         if status == 200:
             bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                  text='Пользователь ' + name_user[0] + ' был успешно утверждён.')
+                                  text='Пользователь ' + name_user[0] + ' был успешно утверждён.', reply_markup=kb)
             bot.send_message(id_tg, 'Ваша учетная запись активирована, ссылка для входа: '
                                     'https://проект24.онлайн\nЛогин: ' + name_user[1].split('@')[0] + '\nПароль: ' +
                              str(random.randint(1000000, 99999999)) + '\nВ случае возникновения вопросов сообщите на '
                                                                       'почту: ваша почта.')
         if status == 400:
-            bot.send_message(call.message.chat.id, 'Ошибка утверждения пользователя ' + name_user[0])
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Ошибка утверждения пользователя ' + name_user[0], reply_markup=kb)
     if call.data in data_admin.cancel_list:
+        kb = InlineKeyboardMarkup()
+        menu = InlineKeyboardButton('Меню', callback_data='menu')
+        kb.add(menu)
         id_tg = call.data.split('_')[1]
         status = db_bot.edit_status('Исключён', id_tg)
         name_user = db_bot.get_name(id_tg)
         if status == 200:
-            bot.send_message(call.message.chat.id, 'Пользователь ' + name_user[0] + ' был успешно исключён.')
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Пользователь ' + name_user[0] + ' был успешно исключён.', reply_markup=kb)
         if status == 400:
-            bot.send_message(call.message.chat.id, 'Ошибка исключенния пользователя ' + name_user[0])
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Ошибка '
+                                                                                                         'исключенния'
+                                                                                                         ' пользователя ' + name_user[0], reply_markup=kb)
     # Интерфейс просмотра списка организаций и их участников.
     if call.data == 'view_organization':
+        id = str(random.randint(10000, 9999999))
+        cout = 1
+        kb = InlineKeyboardMarkup()
+        menu = InlineKeyboardButton('меню', callback_data='menu')
         info_organization = db_bot.get_organization_info()
         for info in info_organization:
-            kb = InlineKeyboardMarkup()
-            accept = InlineKeyboardButton('Просмотреть список пользователей', callback_data=info['name'])
+            accept = InlineKeyboardButton(info['name'], callback_data=info['name'])
             data_admin.list_user_company.append(info['name'])
             kb.add(accept)
-            bot.send_message(call.message.chat.id, 'Названия организации: ' + info['name'] + '\nФИО Директора: ' + info[
-                'FIO_director'] + '\nАдрес: ' + info['adress'] + '\nНомер телефона: ' + info['number'] + '\nEMAIL: ' +
-                             info['email'], reply_markup=kb)
+            if cout == 10:
+                break
+            cout += 1
+        data_admin.list_next_page_cout.append('next_page_' + str(cout) + '_' + id)
+        data_admin.list_last_page_cout.append('last_page_' + str(cout) + '_' + id)
+        next_page = InlineKeyboardButton('>', callback_data='next_page_' + str(cout) + '_' + id)
+        last_page = InlineKeyboardButton('<', callback_data='last_page_' + str(cout) + '_' + id)
+        kb.add(last_page, menu, next_page)
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Выберите '
+                                                                                                     'организацию',
+                              reply_markup=kb)
+    if call.data in data_admin.list_next_page_cout:
+        id = call.data.split('_')[3]
+        cout = int(call.data.split('_')[2]) + 10
+        next_cout = int(call.data.split('_')[2])
+        kb = InlineKeyboardMarkup()
+        menu = InlineKeyboardButton('меню', callback_data='menu')
+        info_organization = db_bot.get_organization_info()
+        for info in info_organization[next_cout:next_cout+10]:
+            accept = InlineKeyboardButton(info['name'], callback_data=info['name'])
+            data_admin.list_user_company.append(info['name'])
+            kb.add(accept)
+        next_page = InlineKeyboardButton('>', callback_data='next_page_' + str(cout) + '_' + id)
+        last_page = InlineKeyboardButton('<', callback_data='last_page_' + str(cout) + '_' + id)
+        data_admin.list_next_page_cout.append('next_page_' + str(cout) + '_' + id)
+        data_admin.list_last_page_cout.append('last_page_' + str(cout) + '_' + id)
+        kb.add(last_page, menu, next_page)
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Выберите '
+                                                                                                     'организацию',
+                              reply_markup=kb)
+    if call.data in data_admin.list_last_page_cout:
+        id = call.data.split('_')[3]
+        cout = int(call.data.split('_')[2]) - 10
+        next_cout = int(call.data.split('_')[2])
+        print(next_cout)
+        kb = InlineKeyboardMarkup()
+        menu = InlineKeyboardButton('меню', callback_data='menu')
+        info_organization = db_bot.get_organization_info()
+        for info in info_organization[next_cout-20:next_cout-10]:
+            accept = InlineKeyboardButton(info['name'], callback_data=info['name'])
+            data_admin.list_user_company.append(info['name'])
+            kb.add(accept)
+        next_page = InlineKeyboardButton('>', callback_data='next_page_' + str(cout) + '_' + id)
+        last_page = InlineKeyboardButton('<', callback_data='last_page_' + str(cout) + '_' + id)
+        data_admin.list_next_page_cout.append('next_page_' + str(cout) + '_' + id)
+        data_admin.list_last_page_cout.append('last_page_' + str(cout) + '_' + id)
+        kb.add(last_page, menu, next_page)
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Выберите '
+                                                                                                     'организацию',
+                              reply_markup=kb)
     if call.data in data_admin.list_user_company:
+        id = str(random.randint(10000, 9999999))
+        cout = 1
+        kb = InlineKeyboardMarkup()
+        menu = InlineKeyboardButton('меню', callback_data='menu')
         user_company_data = db_bot.get_user_company(call.data)
+        data_company = db_bot.get_organization_info_select_company(call.data)
+        for company_data in user_company_data:
+            next_user = InlineKeyboardButton(company_data['name'] + ' ' + company_data['surname'], callback_data=str(call.data) + '_' + company_data['name'] + '_next_user')
+            data_admin.list_user_id.append(str(call.data) + '_' + company_data['name'] + '_next_user')
+            kb.add(next_user)
+            if cout == 10:
+                break
+            cout += 1
+        next_page = InlineKeyboardButton('>', callback_data='next_page_' + str(cout) + '_' + data_company['name'] + '_' + id)
+        last_page = InlineKeyboardButton('<', callback_data='last_page_' + str(cout) + '_' + data_company['name'] + '_' + id)
+        data_admin.list_next_page_cout_user.append('next_page_' + str(cout) + '_' + data_company['name'] + '_' + id)
+        data_admin.list_last_page_cout_user.append('last_page_' + str(cout) + '_' + data_company['name'] + '_' + id)
+        kb.add(last_page, menu, next_page)
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Названия '
+                                                                                                     'организации: '
+                                                                                                     + data_company[
+                                                                                                         'name'] +
+                                                                                                     '\nФИО '
+                                                                                                     'Директора: ' +
+                                                                                                     data_company[
+                                                                                                         'FIO_director'] + '\nАдрес: ' + data_company['adress'] + '\nНомер телефона: ' + data_company['number'] + '\nEMAIL: ' + data_company['email'], reply_markup=kb)
+    if call.data in data_admin.list_next_page_cout_user:
+        cout = int(call.data.split('_')[2]) + 10
+        next_cout = int(call.data.split('_')[2])
+        company_name = call.data.split('_')[3]
+        id = call.data.split('_')[4]
+        kb = InlineKeyboardMarkup()
+        menu = InlineKeyboardButton('меню', callback_data='menu')
+        user_company_data = db_bot.get_user_company(company_name)
+        data_company = db_bot.get_organization_info_select_company(company_name)
+        for company_data in user_company_data[next_cout:next_cout+10]:
+            next_user = InlineKeyboardButton(company_data['name'] + ' ' + company_data['surname'], callback_data=str(call.data) + '_' + company_data['name'] + '_next_user')
+            data_admin.list_user_id.append(str(call.data) + '_' + company_data['name'] + '_next_user')
+            kb.add(next_user)
+        next_page = InlineKeyboardButton('>', callback_data='next_page_' + str(cout) + '_' + company_name + '_' + id)
+        last_page = InlineKeyboardButton('<', callback_data='last_page_' + str(cout) + '_' + company_name + '_' + id)
+        data_admin.list_next_page_cout_user.append('next_page_' + str(cout) + '_' + company_name + '_' + id)
+        data_admin.list_last_page_cout_user.append('last_page_' + str(cout) + '_' + company_name + '_' + id)
+        kb.add(last_page, menu, next_page)
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Названия '
+                                                                                                     'организации: '
+                                                                                                     + data_company[
+                                                                                                         'name'] +
+                                                                                                     '\nФИО '
+                                                                                                     'Директора: ' +
+                                                                                                     data_company[
+                                                                                                         'FIO_director'] + '\nАдрес: ' + data_company['adress'] + '\nНомер телефона: ' + data_company['number'] + '\nEMAIL: ' + data_company['email'], reply_markup=kb)
+    if call.data in data_admin.list_last_page_cout_user:
+        company_name = call.data.split('_')[3]
+        id = call.data.split('_')[4]
+        cout = int(call.data.split('_')[2]) - 10
+        next_cout = int(call.data.split('_')[2])
+        kb = InlineKeyboardMarkup()
+        menu = InlineKeyboardButton('меню', callback_data='menu')
+        user_company_data = db_bot.get_user_company(company_name)
+        data_company = db_bot.get_organization_info_select_company(company_name)
+        for company_data in user_company_data[next_cout-20:next_cout-10]:
+            next_user = InlineKeyboardButton(company_data['name'] + ' ' + company_data['surname'], callback_data=str(call.data) + '_' + company_data['name'] + '_next_user')
+            data_admin.list_user_id.append(str(call.data) + '_' + company_data['name'] + '_next_user')
+            kb.add(next_user)
+        next_page = InlineKeyboardButton('>', callback_data='next_page_' + str(cout) + '_' + company_name + '_' + id)
+        last_page = InlineKeyboardButton('<', callback_data='last_page_' + str(cout) + '_' + company_name + '_' + id)
+        data_admin.list_next_page_cout_user.append('next_page_' + str(cout) + '_' + company_name + '_' + id)
+        data_admin.list_last_page_cout_user.append('last_page_' + str(cout) + '_' + company_name + '_' + id)
+        kb.add(last_page, menu, next_page)
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Названия '
+                                                                                                     'организации: '
+                                                                                                     + data_company[
+                                                                                                         'name'] +
+                                                                                                     '\nФИО '
+                                                                                                     'Директора: ' +
+                                                                                                     data_company[
+                                                                                                         'FIO_director'] + '\nАдрес: ' + data_company['adress'] + '\nНомер телефона: ' + data_company['number'] + '\nEMAIL: ' + data_company['email'], reply_markup=kb)
+    if call.data in data_admin.list_user_id:
+        user_company_data = db_bot.get_user_company(call.data.split('_')[0])
         try:
             if str(user_company_data) != '()':
                 for data_anket in user_company_data:
@@ -185,20 +371,26 @@ def callback_query(call):
                                                          callback_data='edit_password_' + str(data_anket['id_tg']))
                     send_message = InlineKeyboardButton('Отправить сообщение',
                                                         callback_data='send_message_' + str(data_anket['id_tg']))
+                    back = InlineKeyboardButton('Назад', callback_data='view_organization')
                     data_admin.list_id_edit_status.append('edit_status_' + str(data_anket['id_tg']))
                     data_admin.list_id_edit_password.append('edit_password_' + str(data_anket['id_tg']))
                     data_admin.list_id_send_message.append('send_message_' + str(data_anket['id_tg']))
                     kb.add(edit_status, edit_password)
                     kb.add(send_message)
-                    bot.send_message(call.message.chat.id,
+                    kb.add(back)
+                    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=
                                      'Имя: ' + data_anket['name'] + '\nФамилия: ' + data_anket[
                                          'surname'] + '\nПочта: ' +
                                      data_anket['email'] + '\nКомпания: ' + data_anket['company'] + '\nДолжность: ' +
                                      data_anket['position'] + '\nТелефон: ' + data_anket['number'], reply_markup=kb)
             else:
-                bot.send_message(call.message.chat.id, 'У этой компании нет пользователей.')
+                bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text= 'У этой '
+                                                                                                              'компании нет пользователей.')
         except:
-            bot.send_message(call.message.chat.id, 'У этой компании нет пользователей.')
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text= 'У этой '
+                                                                                                          'компании '
+                                                                                                          'нет '
+                                                                                                          'пользователей.')
     # Отправка сообщения пользователю по id
     if call.data in data_admin.list_id_send_message:
         id_tg = call.data.split('_')[2]
@@ -214,15 +406,17 @@ def callback_query(call):
         id_tg = call.data.split('_')[2]
         data_user = db_bot.get_full_info_user(id_tg)
         kb = InlineKeyboardMarkup()
+        menu = InlineKeyboardButton('Меню', callback_data='menu')
         edit_status_on_the_accept = InlineKeyboardButton('Сменить на утверждён', callback_data=str(
             data_user['id_tg']) + '_' + 'edit_status_on_the_accept')
         edit_status_on_the_ban = InlineKeyboardButton('Сменить на исключён',
                                                       callback_data=str(
                                                           data_user['id_tg']) + '_' + 'edit_status_on_the_ban')
         kb.add(edit_status_on_the_accept, edit_status_on_the_ban)
+        kb.add(menu)
         data_admin.list_edit_status_on_the_accept.append(str(data_user['id_tg']) + '_' + 'edit_status_on_the_accept')
         data_admin.list_edit_status_on_the_ban.append(str(data_user['id_tg']) + '_' + 'edit_status_on_the_ban')
-        bot.send_message(call.message.chat.id, 'Имя пользователя: ' + data_user['name'] + '\nФамилия: ' + data_user[
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Имя пользователя: ' + data_user['name'] + '\nФамилия: ' + data_user[
             'surname'] + '\nВ данный момент у пользователя статус: ' + data_user['status_user'], reply_markup=kb)
     # Изменения статуса на Утверждён
     if call.data in data_admin.list_edit_status_on_the_accept:
@@ -241,10 +435,10 @@ def callback_query(call):
                              password_bitrix + '\nВ случае возникновения вопросов сообщите на '
                                                'почту: ваша почта.')
             db_bot.set_login_password_user_in_bitrix(login_bitrix, password_bitrix, id_tg)
-            bot.send_message(call.message.chat.id,
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=
                              'Статус для пользователя ' + str(id_tg) + ' был изменён на "Утверждён".', reply_markup=kb)
         if answer == 400:
-            bot.send_message(call.message.chat.id, 'Статус для пользователя ' + str(
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Статус для пользователя ' + str(
                 id_tg) + ' не был изменён. Т.к он уже имеет данный статус.', reply_markup=kb)
     # Изменения статуса на Исключён
     if call.data in data_admin.list_edit_status_on_the_ban:
@@ -256,17 +450,19 @@ def callback_query(call):
         answer = db_bot.edit_status(status, id_tg)
         if answer == 200:
             bot.send_message(id_tg, 'Вас исключили с компании.')
-            bot.send_message(call.message.chat.id,
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=
                              'Статус для пользователя ' + str(id_tg) + ' был изменён на "Исключён".', reply_markup=kb)
         if answer == 400:
-            bot.send_message(call.message.chat.id, 'Статус для пользователя ' + str(
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Статус для пользователя ' + str(
                 id_tg) + ' не был изменён. Т.к он уже имеет данный статус.', reply_markup=kb)
     # Рассылка
     if call.data == 'mailing':
         kb = InlineKeyboardMarkup()
         all_user = InlineKeyboardButton('Всем участникам', callback_data='all_user')
         mailing_organiz = InlineKeyboardButton('По организации', callback_data='mailing_organiz')
+        menu = InlineKeyboardButton('Меню', callback_data='menu')
         kb.add(all_user, mailing_organiz)
+        kb.add(menu)
         bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Выберите способ '
                                                                                                      'рассылки:',
                               reply_markup=kb)
@@ -278,8 +474,10 @@ def callback_query(call):
         for names in list_all_data_company:
             kb = InlineKeyboardMarkup()
             select = InlineKeyboardButton('Выбрать', callback_data='company_' + names['name'])
+            menu = InlineKeyboardButton('Меню', callback_data='menu')
             data_admin.list_all_data_company.append('company_' + names['name'])
             kb.add(select)
+            kb.add(menu)
             bot.send_message(call.message.chat.id, 'Названия организации: ' + names['name'] + '\nФИО Директора: ' + names[
                 'FIO_director'] + '\nАдрес: ' + names['adress'] + '\nНомер телефона: ' + names['number'] + '\nEMAIL: ' +
                              names['email'], reply_markup=kb)
@@ -290,6 +488,9 @@ def callback_query(call):
 
 
 def mailing_organization(message, name_organization):
+    kb = InlineKeyboardMarkup()
+    menu = InlineKeyboardButton('меню', callback_data='menu')
+    kb.add(menu)
     message_text = message.text
     list_id_tg_company = db_bot.get_user_company(name_organization)
     try:
@@ -297,10 +498,13 @@ def mailing_organization(message, name_organization):
             bot.send_message(index_id_tg['id_tg'], message_text)
     except:
         pass
-    bot.send_message(message.chat.id, 'Рассылка успешно завершена.')
+    bot.send_message(message.chat.id, 'Рассылка успешно завершена.', reply_markup=kb)
 
 
 def mailing_all_user(message):
+    kb = InlineKeyboardMarkup()
+    menu = InlineKeyboardButton('меню', callback_data='menu')
+    kb.add(menu)
     message_text = message.text
     data_list_id_tg = db_bot.get_id_tg_all_user()
     try:
@@ -308,7 +512,7 @@ def mailing_all_user(message):
             bot.send_message(index_id_tg['id_tg'], message_text)
     except:
         pass
-    bot.send_message(message.chat.id, 'Рассылка успешно завершена.')
+    bot.send_message(message.chat.id, 'Рассылка успешно завершена.', reply_markup=kb)
 
 
 def edit_password_company_user(message, id_tg):
