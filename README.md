@@ -1,4 +1,4 @@
-### Rigistrator_tg_bot
+# Rigistrator_tg_bot
 ## Работа с админкой
 Вводим команду /start, появится меню из 3 пунктов:
 - Просмотр заявок
@@ -11,23 +11,27 @@
 
 ![image](https://user-images.githubusercontent.com/63918733/116965470-917f5a80-acb6-11eb-8052-ab9114b7d5f5.png)
 
-Кнопка просмотра списка организай выводит все организации.
+Кнопка просмотра списка компаний, выводит все организации.
 
-![image](https://user-images.githubusercontent.com/63918733/116965529-b8d62780-acb6-11eb-8547-9f3d39d3b43e.png)
+![image](https://user-images.githubusercontent.com/63918733/116997905-19308d80-ace6-11eb-9c46-4a7ec4310cae.png)
+
 
 Отсюда вы можете посмотреть на участников этой организации и всю информацию об них.
 
-![image](https://user-images.githubusercontent.com/63918733/116965625-ee7b1080-acb6-11eb-90b9-783c3d3fa294.png)
+![image](https://user-images.githubusercontent.com/63918733/116998012-4715d200-ace6-11eb-9fce-33409e05d582.png)
+
+![image](https://user-images.githubusercontent.com/63918733/116998050-539a2a80-ace6-11eb-8bc5-7e1026648de0.png)
+
 
 Вы можете изменить какие-то данные для пользователя, то есть:
 - Изменить статус
-- Именить пароль
+- Изменить пароль
 - Отправить личное сообщение
 
 После изменения статуса пользователя ему придёт уведомления об этом, так же и, о смене пароля.
 
-##Пункт рассылки
-
-![image](https://user-images.githubusercontent.com/63918733/116965845-79f4a180-acb7-11eb-800e-40d752491235.png)
-
+### Пункт рассылки
 Вы можете отправить сообщение всем пользователям или же, пользователям отдельной компании.
+
+![image](https://user-images.githubusercontent.com/63918733/116998149-73c9e980-ace6-11eb-9302-0c1e0f4c71f5.png)
+
