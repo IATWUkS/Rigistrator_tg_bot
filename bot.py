@@ -40,8 +40,12 @@ class data_admin:
 
 with open('words.txt', 'r', encoding='utf-8') as f:
     string = f.readline()
-    for word in string.split(','):
-        data_admin.list_words_block.append(word)
+    string_2 = string.split(',')
+    for word in string_2:
+        try:
+            data_admin.list_words_block.append(word.split(' ')[1])
+        except:
+            pass
 
 
 @bot.message_handler(commands=['start'])
@@ -78,7 +82,9 @@ def message_handler(message):
     if check_profile == 400:
         kb = InlineKeyboardMarkup()
         start = InlineKeyboardButton('Заполнить', callback_data='registration')
+        help = InlineKeyboardButton('Помощь', callback_data='help')
         kb.add(start)
+        kb.add(help)
         photo = open('data/06_about.png', 'rb')
         bot.send_photo(message.chat.id, photo=photo,
                        caption='Добрый день, я администратор корпоративного портала "Портал".\nДля регистрации прошу '
@@ -102,12 +108,15 @@ def control_message(message):
     db_bot.insert_message(id_chat, id_user, message_chat, date, name_chat, name_user)
     message_worlds = message.text.split()
     for word in message_worlds:
-        if word in data_admin.list_words_block:
+        if word.lower() in data_admin.list_words_block:
             bot.reply_to(message, 'Пожалуйста воздержитесь от употребление мата.')
 
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
+    if call.data == 'help':
+        msg = bot.send_message(call.message.chat.id, 'Введите ваш вопрос:')
+        bot.register_next_step_handler(msg, support_message)
     if call.data == 'menu':
         check_profile = db_bot.get_admin(call.message.chat.id)
         try:
@@ -689,10 +698,10 @@ def callback_query(call):
         if status['status'] == 'Обработка':
             msg = bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                         text='Введите сообщение:')
+            bot.register_next_step_handler(msg, send_message_user_support_repeat, data_anket[3], data_anket[2])
         else:
             msg = bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                         text='Заявка уже обработана.', reply_markup=kb)
-        bot.register_next_step_handler(msg, send_message_user_support, data_anket[3], data_anket[2])
     if call.data in data_admin.list_callback_support_stop:
         data_anket = call.data.split('_')
         db_bot.update_message_support_status(data_anket[2], "Закончен")
@@ -909,57 +918,60 @@ def send_message_company_user_url(message, id_tg, message_text):
 
 @bot.message_handler(content_types=['document', 'audio', 'photo'])
 def send_message_company_user_photo(message, id_tg, url, message_text):
-    if message.content_type == 'photo':
-        raw = message.photo[2].file_id
-        name = raw + ".jpg"
-        file_info = bot.get_file(raw)
-        downloaded_file = bot.download_file(file_info.file_path)
-        with open('data/photo_message_user/' + name, 'wb') as new_file:
-            new_file.write(downloaded_file)
-        img = open('data/photo_message_user/' + name, 'rb')
-        if url != "0" and url is not None:
-            kb = InlineKeyboardMarkup()
-            back = InlineKeyboardButton('Назад', callback_data='view_organization')
-            kb.add(back)
-            kb_2 = InlineKeyboardMarkup()
-            url_button = InlineKeyboardButton('Перейти по ссылке', url=url)
-            kb_2.add(url_button)
-            try:
-                bot.send_photo(id_tg, img, message_text, reply_markup=kb_2)
-                bot.send_message(message.chat.id, 'Сообщение успешно отправлено!', reply_markup=kb)
-            except:
-                bot.send_message(message.chat.id, 'Сообщение не удалось отправить.', reply_markup=kb)
+    try:
+        if message.content_type == 'photo':
+            raw = message.photo[2].file_id
+            name = raw + ".jpg"
+            file_info = bot.get_file(raw)
+            downloaded_file = bot.download_file(file_info.file_path)
+            with open('data/photo_message_user/' + name, 'wb') as new_file:
+                new_file.write(downloaded_file)
+            img = open('data/photo_message_user/' + name, 'rb')
+            if url != "0" and url is not None:
+                kb = InlineKeyboardMarkup()
+                back = InlineKeyboardButton('Назад', callback_data='view_organization')
+                kb.add(back)
+                kb_2 = InlineKeyboardMarkup()
+                url_button = InlineKeyboardButton('Перейти по ссылке', url=url)
+                kb_2.add(url_button)
+                try:
+                    bot.send_photo(id_tg, img, message_text, reply_markup=kb_2)
+                    bot.send_message(message.chat.id, 'Сообщение успешно отправлено!', reply_markup=kb)
+                except:
+                    bot.send_message(message.chat.id, 'Сообщение не удалось отправить.', reply_markup=kb)
+            else:
+                kb = InlineKeyboardMarkup()
+                back = InlineKeyboardButton('Назад', callback_data='view_organization')
+                kb.add(back)
+                try:
+                    bot.send_photo(id_tg, img, message_text)
+                    bot.send_message(message.chat.id, 'Сообщение успешно отправлено!', reply_markup=kb)
+                except:
+                    bot.send_message(message.chat.id, 'Сообщение не удалось отправить.', reply_markup=kb)
         else:
-            kb = InlineKeyboardMarkup()
-            back = InlineKeyboardButton('Назад', callback_data='view_organization')
-            kb.add(back)
-            try:
-                bot.send_photo(id_tg, img, message_text)
-                bot.send_message(message.chat.id, 'Сообщение успешно отправлено!', reply_markup=kb)
-            except:
-                bot.send_message(message.chat.id, 'Сообщение не удалось отправить.', reply_markup=kb)
-    else:
-        if url != "0":
-            kb = InlineKeyboardMarkup()
-            back = InlineKeyboardButton('Назад', callback_data='view_organization')
-            kb.add(back)
-            kb_2 = InlineKeyboardMarkup()
-            url_button = InlineKeyboardButton('Перейти по ссылке', url=url)
-            kb_2.add(url_button)
-            try:
-                bot.send_message(id_tg, message_text, reply_markup=kb_2)
-                bot.send_message(message.chat.id, 'Сообщение успешно отправлено!', reply_markup=kb)
-            except:
-                bot.send_message(message.chat.id, 'Сообщение не удалось отправить.', reply_markup=kb)
-        else:
-            kb = InlineKeyboardMarkup()
-            back = InlineKeyboardButton('Назад', callback_data='view_organization')
-            kb.add(back)
-            try:
-                bot.send_message(id_tg, message_text)
-                bot.send_message(message.chat.id, 'Сообщение успешно отправлено!', reply_markup=kb)
-            except:
-                bot.send_message(message.chat.id, 'Сообщение не удалось отправить.', reply_markup=kb)
+            if url != "0":
+                kb = InlineKeyboardMarkup()
+                back = InlineKeyboardButton('Назад', callback_data='view_organization')
+                kb.add(back)
+                kb_2 = InlineKeyboardMarkup()
+                url_button = InlineKeyboardButton('Перейти по ссылке', url=url)
+                kb_2.add(url_button)
+                try:
+                    bot.send_message(id_tg, message_text, reply_markup=kb_2)
+                    bot.send_message(message.chat.id, 'Сообщение успешно отправлено!', reply_markup=kb)
+                except:
+                    bot.send_message(message.chat.id, 'Сообщение не удалось отправить.', reply_markup=kb)
+            else:
+                kb = InlineKeyboardMarkup()
+                back = InlineKeyboardButton('Назад', callback_data='view_organization')
+                kb.add(back)
+                try:
+                    bot.send_message(id_tg, message_text)
+                    bot.send_message(message.chat.id, 'Сообщение успешно отправлено!', reply_markup=kb)
+                except:
+                    bot.send_message(message.chat.id, 'Сообщение не удалось отправить.', reply_markup=kb)
+    except:
+        pass
 
 
 def surname_input(message):

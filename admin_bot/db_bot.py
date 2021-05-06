@@ -73,7 +73,7 @@ def update_message_support_status(number_anket, status):
 
 def update_message_support(number_anket, message_content):
     connection = get_conn()
-    sql = 'UPDATE adm_support_messenger SET message = "%s" WHERE number_anket = "%s"' % (message_content, number_anket)
+    sql = 'UPDATE adm_support_messenger SET message = "%s" WHERE number_anket = "%s" AND id > 0' % (message_content, number_anket)
     cursor = connection.cursor()
     cursor.execute(sql)
     connection.commit()
