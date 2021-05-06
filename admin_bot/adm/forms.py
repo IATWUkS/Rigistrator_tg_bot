@@ -1,12 +1,37 @@
 from django import forms
 
-from .models import pre_registration_data, Organization, Admin_profile
+from .models import pre_registration_data, Organization, Admin_profile, logging_message, support_messenger
+
+
+class support_messenger_form(forms.ModelForm):
+    class Meta:
+        model = support_messenger
+        fields = ('number_anket', 'id_user', 'message', 'status')
+        widgets = {
+            'number_anket': forms.TextInput,
+            'id_user': forms.TextInput,
+            'status': forms.TextInput,
+        }
+
+
+class logging_message_form(forms.ModelForm):
+    class Meta:
+        model = logging_message
+        fields = ('id_chat', 'id_user', 'message', 'date', 'name_chat', 'name_user')
+        widgets = {
+            'id_chat': forms.TextInput,
+            'id_user': forms.TextInput,
+            'name_chat': forms.TextInput,
+            'name_user': forms.TextInput,
+        }
 
 
 class Reg_form(forms.ModelForm):
     class Meta:
         model = pre_registration_data
-        fields = ('id_tg', 'name', 'surname', 'email', 'company', 'position', 'number', 'data_processing', 'status_user', 'login_bitrix', 'password_bitrix')
+        fields = (
+            'id_tg', 'name', 'surname', 'email', 'company', 'position', 'number', 'data_processing', 'status_user',
+            'login_bitrix', 'password_bitrix')
         widgets = {
             'name': forms.TextInput,
             'surname': forms.TextInput,

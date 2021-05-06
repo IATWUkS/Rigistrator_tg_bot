@@ -1,3 +1,4 @@
+import datetime
 import random
 
 import telebot
@@ -6,6 +7,7 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 import admin_bot.db_bot as db_bot
 import AUTH_DATA
 import auto_mailing as am
+import exc_write
 
 TOKEN = AUTH_DATA.TG_TOKEN
 bot = telebot.TeleBot(TOKEN)
@@ -30,6 +32,16 @@ class data_admin:
     list_auto_mailing_company = []
     company_stop_list = []
     company_start_list = []
+    list_words_block = []
+    list_id_anket = []
+    list_callback_support_send = []
+    list_callback_support_stop = []
+
+
+with open('words.txt', 'r', encoding='utf-8') as f:
+    string = f.readline()
+    for word in string.split(','):
+        data_admin.list_words_block.append(word)
 
 
 @bot.message_handler(commands=['start'])
@@ -54,8 +66,10 @@ def message_handler(message):
                                                          callback_data='view_organization')
                 mailing = InlineKeyboardButton('Рассылка', callback_data='mailing')
                 auto_mailing = InlineKeyboardButton('Авто рассылка', callback_data='auto_mailing')
+                support = InlineKeyboardButton('Поддержка', callback_data='support')
                 kb.add(view, view_organization)
                 kb.add(mailing, auto_mailing)
+                kb.add(support)
                 bot.send_message(message.chat.id,
                                  'Привет, ' + check_profile[1] + '.\nВы администратор верхнего уровня.',
                                  reply_markup=kb)
@@ -69,6 +83,27 @@ def message_handler(message):
         bot.send_photo(message.chat.id, photo=photo,
                        caption='Добрый день, я администратор корпоративного портала "Портал".\nДля регистрации прошу '
                                'заполнить информацию о себе:', reply_markup=kb)
+
+
+@bot.message_handler(commands=['help'])
+def message_handler(message):
+    msg = bot.send_message(message.chat.id, 'Введите ваш вопрос:')
+    bot.register_next_step_handler(msg, support_message)
+
+
+@bot.message_handler(content_types=['text'])
+def control_message(message):
+    id_chat = message.chat.id
+    id_user = message.from_user.id
+    name_chat = message.chat.title
+    date = datetime.datetime.now()
+    name_user = message.from_user.first_name
+    message_chat = message.text
+    db_bot.insert_message(id_chat, id_user, message_chat, date, name_chat, name_user)
+    message_worlds = message.text.split()
+    for word in message_worlds:
+        if word in data_admin.list_words_block:
+            bot.reply_to(message, 'Пожалуйста воздержитесь от употребление мата.')
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -95,13 +130,79 @@ def callback_query(call):
                                                              callback_data='view_organization')
                     mailing = InlineKeyboardButton('Рассылка', callback_data='mailing')
                     auto_mailing = InlineKeyboardButton('Авто рассылка', callback_data='auto_mailing')
+                    support = InlineKeyboardButton('Поддержка', callback_data='support')
                     kb.add(view, view_organization)
                     kb.add(mailing, auto_mailing)
+                    kb.add(support)
                     bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=
                     'Привет, ' + check_profile[1] + '.\nВы администратор верхнего уровня.',
                                           reply_markup=kb)
         except:
             pass
+    # Интерфейс поддержки
+    if call.data == 'support':
+        kb = InlineKeyboardMarkup()
+        download_message_log = InlineKeyboardButton('Выгрузка сообщений', callback_data='download_message_log')
+        support_messege_answer = InlineKeyboardButton('Ответить на вопросы', callback_data='support_messege_answer')
+        menu = InlineKeyboardButton('Меню', callback_data='menu')
+        kb.add(download_message_log, support_messege_answer)
+        kb.add(menu)
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Выберите опцию',
+                              reply_markup=kb)
+    if call.data == 'support_messege_answer':
+        kb2 = InlineKeyboardMarkup()
+        menu = InlineKeyboardButton('меню', callback_data='menu')
+        kb2.add(menu)
+        data_anket = db_bot.get_support_anket()
+        for anket in data_anket:
+            status = db_bot.get_status_support(anket['number_anket'])
+            if status['status'] == 'Обработка':
+                kb = InlineKeyboardMarkup()
+                check_message = InlineKeyboardButton('Ответить',
+                                                         callback_data='check_message_' + anket['number_anket'] + '_' + anket['id_user'])
+                kb.add(check_message)
+                data_admin.list_id_anket.append('check_message_' + anket['number_anket'] + '_' + anket['id_user'])
+                bot.send_message(call.message.chat.id, 'Номер анкеты:\n%s\n\nСообщение:\n%s' % (anket['number_anket'], anket['message']), reply_markup=kb)
+        bot.send_message(call.message.chat.id, '.', reply_markup=kb2)
+    if call.data == 'download_message_log':
+        kb = InlineKeyboardMarkup()
+        download_message_chat_all = InlineKeyboardButton('По чату', callback_data='download_message_chat_all')
+        download_message_chat_user = InlineKeyboardButton('По юзеру из чата',
+                                                          callback_data='download_message_chat_user')
+        all_upload_message = InlineKeyboardButton('Выгрузка всех сообщений', callback_data='all_upload_message')
+        back = InlineKeyboardButton('Назад', callback_data='support')
+        kb.add(download_message_chat_all, download_message_chat_user)
+        kb.add(all_upload_message)
+        kb.add(back)
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Выберите тип '
+                                                                                                     'выгрузки',
+                              reply_markup=kb)
+    if call.data == 'all_upload_message':
+        kb = InlineKeyboardMarkup()
+        menu = InlineKeyboardButton('Меню', callback_data='menu')
+        kb.add(menu)
+        names_chats = []
+        content_message = []
+        date_message = []
+        data = db_bot.get_data_history_message_all()
+        if data is None or str(data) == '()':
+            bot.send_message(call.message.chat.id, 'Такого пользователя нет.')
+        else:
+            for item in data:
+                names_chats.append(item['name_chat'])
+                content_message.append(item['message'])
+                date_message.append(item['date'])
+            exc_write.create_excel_message_all_company(names_chats, content_message, date_message)
+            bot.send_document(call.message.chat.id, open('all_message_company.xlsx', 'rb'))
+            bot.send_message(call.message.chat.id, 'Нажмите, чтоб перейти в меню', reply_markup=kb)
+    if call.data == 'download_message_chat_user':
+        msg = bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                    text='Введите имя пользователя:')
+        bot.register_next_step_handler(msg, upload_history_message_user_step_1)
+    if call.data == 'download_message_chat_all':
+        msg = bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                    text='Введите названия компании:')
+
     # Регистрация нового пользователя
     if call.data == 'registration':
         check = db_bot.check_account(call.message.chat.id)
@@ -426,7 +527,7 @@ def callback_query(call):
         data_admin.company_start_list.append('start_mailing_' + company)
         data_admin.company_stop_list.append('stop_mailing_' + company)
         bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                    text='Выберите действие.', reply_markup=kb)
+                              text='Выберите действие.', reply_markup=kb)
     if call.data in data_admin.company_start_list:
         company = call.data.split('_')[2]
         msg = bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
@@ -573,6 +674,30 @@ def callback_query(call):
         name_organization = call.data.split('_')[1]
         msg = bot.send_message(call.message.chat.id, 'Введите сообщение:')
         bot.register_next_step_handler(msg, mailing_organization, name_organization)
+    # Ответы на заявки об помощи
+    if call.data in data_admin.list_id_anket:
+        data_anket = call.data.split('_')
+        msg = bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                    text='Введите ответ:')
+        bot.register_next_step_handler(msg, send_message_user_support, data_anket[3], data_anket[2])
+    if call.data in data_admin.list_callback_support_send:
+        kb = InlineKeyboardMarkup()
+        menu = InlineKeyboardButton('Меню', callback_data='menu')
+        kb.add(menu)
+        data_anket = call.data.split('_')
+        status = db_bot.get_status_support(data_anket[2])
+        if status['status'] == 'Обработка':
+            msg = bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                        text='Введите сообщение:')
+        else:
+            msg = bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                        text='Заявка уже обработана.', reply_markup=kb)
+        bot.register_next_step_handler(msg, send_message_user_support, data_anket[3], data_anket[2])
+    if call.data in data_admin.list_callback_support_stop:
+        data_anket = call.data.split('_')
+        db_bot.update_message_support_status(data_anket[2], "Закончен")
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                              text='Диалог завершен.')
     # Автоматическая рассылка
     if call.data == 'auto_mailing':
         kb = InlineKeyboardMarkup()
@@ -605,6 +730,89 @@ def callback_query(call):
                                                                                                      'пользователей '
                                                                                                      'отключена.',
                               reply_markup=kb)
+
+
+def send_message_user_support_repeat(message, id_tg, number_anket):
+    content_message = message.text
+    kb = InlineKeyboardMarkup()
+    check_message = InlineKeyboardButton('Ответить',
+                                         callback_data='check_message_' + number_anket + '_' + id_tg)
+    kb.add(check_message)
+    db_bot.update_message_support(number_anket, content_message)
+    bot.send_message(message.chat.id, 'Вашe сообщение отправлено.')
+    id_admin = db_bot.get_admin_idtg()
+    for ids in id_admin:
+        bot.send_message(ids['id_tg'], 'У вас новое сообщение\n\nСообщение:\n'+content_message, reply_markup=kb)
+
+
+def send_message_user_support(message, id_tg, number_anket):
+    kb = InlineKeyboardMarkup()
+    send_message = InlineKeyboardButton('Написать',
+                                        callback_data='send_message_' + number_anket + '_' + str(message.chat.id))
+    stop_message = InlineKeyboardButton('Закончить',
+                                        callback_data='stop_message_' + number_anket + '_' + str(message.chat.id))
+    kb.add(send_message, stop_message)
+    data_admin.list_callback_support_send.append('send_message_' + number_anket + '_' + str(message.chat.id))
+    data_admin.list_callback_support_stop.append('stop_message_' + number_anket + '_' + str(message.chat.id))
+    bot.send_message(id_tg, "Ваша заявка "+number_anket+" обработана\nСообщение:\n\n"+message.text, reply_markup=kb)
+
+
+def support_message(message):
+    number_anket = str(random.randint(100000, 999999999))
+    content_message = message.text
+    kb = InlineKeyboardMarkup()
+    check_message = InlineKeyboardButton('Ответить',
+                                         callback_data='check_message_' + number_anket + '_' + str(message.chat.id))
+    kb.add(check_message)
+    data_admin.list_id_anket.append('check_message_' + number_anket + '_' + str(message.chat.id))
+    db_bot.insert_message_support(number_anket, message.chat.id, content_message)
+    db_bot.update_message_support_status(number_anket, "Обработка")
+    bot.send_message(message.chat.id, 'Ваша заявка отправлена.')
+    id_admin = db_bot.get_admin_idtg()
+    for ids in id_admin:
+        bot.send_message(ids['id_tg'], 'У вас новая заявка\n\nСообщение:\n' + content_message, reply_markup=kb)
+
+
+def upload_history_message_user_step_1(message):
+    kb = InlineKeyboardMarkup()
+    menu = InlineKeyboardButton('меню', callback_data='menu')
+    kb.add(menu)
+    name_user = message.text
+    names_chats = []
+    content_message = []
+    date_message = []
+    data = db_bot.get_data_history_message_name_user(name_user)
+    if data is None or str(data) == '()':
+        bot.send_message(message.chat.id, 'Такого пользователя нет.', reply_markup=kb)
+    else:
+        for item in data:
+            names_chats.append(item['name_chat'])
+            content_message.append(item['message'])
+            date_message.append(item['date'])
+        exc_write.create_excel_message_all_company(names_chats, content_message, date_message)
+        bot.send_document(message.chat.id, open('all_message_company.xlsx', 'rb'))
+        bot.send_message(message.chat.id, 'Нажмите для перехода в меню', reply_markup=kb)
+
+
+def upload_history_message(message):
+    kb = InlineKeyboardMarkup()
+    menu = InlineKeyboardButton('меню', callback_data='menu')
+    kb.add(menu)
+    names_chats = []
+    content_message = []
+    date_message = []
+    name_company = message.text
+    data = db_bot.get_data_history_message(name_company)
+    if data is None or str(data) == '()':
+        bot.send_message(message.chat.id, 'Такой компании нет.', reply_markup=kb)
+    else:
+        for item in data:
+            names_chats.append(item['name_chat'])
+            content_message.append(item['message'])
+            date_message.append(item['date'])
+        exc_write.create_excel_message_all_company(names_chats, content_message, date_message)
+        bot.send_document(message.chat.id, open('all_message_company.xlsx', 'rb'))
+        bot.send_message(message.chat.id, 'Нажмите для перехода в меню', reply_markup=kb)
 
 
 def next_mailing_steps(message):

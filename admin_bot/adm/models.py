@@ -54,3 +54,33 @@ class Admin_profile(models.Model):
 
     def __str__(self):
         return self.FIO
+
+
+class logging_message(models.Model):
+    id_chat = models.TextField(verbose_name='ID чата')
+    id_user = models.TextField(verbose_name='ID пользователя')
+    message = models.TextField(verbose_name='Сообщение')
+    date = models.DateField(verbose_name='Дата отправки сообщения')
+    name_chat = models.TextField(verbose_name='Названия чата')
+    name_user = models.TextField(verbose_name='Имя пользователя')
+
+    class Meta:
+        verbose_name = 'Сообщения'
+        verbose_name_plural = 'Сообщения'
+
+    def __str__(self):
+        return self.id_chat
+
+
+class support_messenger(models.Model):
+    number_anket = models.TextField(verbose_name='Номер заявки')
+    id_user = models.TextField(verbose_name='ID пользователя')
+    message = models.TextField(verbose_name='Сообщение')
+    status = models.TextField(verbose_name='Статус')
+
+    class Meta:
+        verbose_name = 'Поддержка'
+        verbose_name_plural = 'Поддержка'
+
+    def __str__(self):
+        return self.number_anket

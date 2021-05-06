@@ -14,6 +14,38 @@ def get_conn():
     return connection
 
 
+def insert_message_support(number_anket, id_user, message):
+    connection = get_conn()
+    try:
+        sql = 'INSERT INTO adm_support_messenger(number_anket, id_user, message, status) VALUES ("%s", "%s", "%s", ' \
+              '"Обработка")' % (
+                  number_anket, id_user, message)
+        cursor = connection.cursor()
+        cursor.execute(sql)
+        connection.commit()
+        connection.close()
+        return 200
+    except:
+        connection.close()
+        return 400
+
+
+def insert_message(id_chat, id_user, message, date, name_chat, name_user):
+    connection = get_conn()
+    try:
+        sql = 'INSERT INTO adm_logging_message(id_chat, id_user, message, date, name_chat, name_user) VALUES ("%s", ' \
+              '"%s", "%s", ' \
+              '"%s", "%s", "%s")' % (id_chat, id_user, message, date, name_chat, name_user)
+        cursor = connection.cursor()
+        cursor.execute(sql)
+        connection.commit()
+        connection.close()
+        return 200
+    except:
+        connection.close()
+        return 400
+
+
 def input_pre_registration_data(row, values):
     connection = get_conn()
     try:
@@ -28,6 +60,24 @@ def input_pre_registration_data(row, values):
     except:
         connection.close()
         return 400
+
+
+def update_message_support_status(number_anket, status):
+    connection = get_conn()
+    sql = 'UPDATE adm_support_messenger SET status = "%s" WHERE number_anket = "%s"' % (status, number_anket)
+    cursor = connection.cursor()
+    cursor.execute(sql)
+    connection.commit()
+    connection.close()
+
+
+def update_message_support(number_anket, message_content):
+    connection = get_conn()
+    sql = 'UPDATE adm_support_messenger SET message = "%s" WHERE number_anket = "%s"' % (message_content, number_anket)
+    cursor = connection.cursor()
+    cursor.execute(sql)
+    connection.commit()
+    connection.close()
 
 
 def input_registr_data(row, values, id_tg):
@@ -92,7 +142,7 @@ def edit_status(status, id_tg):
     try:
         cursor = connection.cursor()
         sql = 'UPDATE adm_pre_registration_data SET status_user = "%s" WHERE id_tg = "%s" AND status_user != "%s"' % (
-        status, id_tg, status)
+            status, id_tg, status)
         cursor.execute(sql)
         connection.commit()
         connection.close()
@@ -219,6 +269,84 @@ def get_organization_info_select_company(company):
         sql = 'SELECT * FROM adm_organization WHERE name = "%s"' % company
         cursor.execute(sql)
         data = cursor.fetchone()
+        connection.close()
+        return data
+    except:
+        return None
+
+
+def get_data_history_message(company):
+    connection = get_conn()
+    try:
+        cursor = connection.cursor()
+        sql = 'SELECT * FROM adm_logging_message WHERE name_chat = "%s"' % company
+        cursor.execute(sql)
+        data = cursor.fetchall()
+        connection.close()
+        return data
+    except:
+        return None
+
+
+def get_data_history_message_name_user(name_user):
+    connection = get_conn()
+    try:
+        cursor = connection.cursor()
+        sql = 'SELECT * FROM adm_logging_message WHERE name_user = "%s" AND name_chat != "None"' % name_user
+        cursor.execute(sql)
+        data = cursor.fetchall()
+        connection.close()
+        return data
+    except:
+        return None
+
+
+def get_data_history_message_all():
+    connection = get_conn()
+    try:
+        cursor = connection.cursor()
+        sql = 'SELECT * FROM adm_logging_message WHERE name_chat != "None"'
+        cursor.execute(sql)
+        data = cursor.fetchall()
+        connection.close()
+        return data
+    except:
+        return None
+
+
+def get_admin_idtg():
+    connection = get_conn()
+    try:
+        cursor = connection.cursor()
+        sql = 'SELECT id_tg FROM adm_admin_profile'
+        cursor.execute(sql)
+        data = cursor.fetchall()
+        connection.close()
+        return data
+    except:
+        return None
+
+
+def get_status_support(number_anket):
+    connection = get_conn()
+    try:
+        cursor = connection.cursor()
+        sql = 'SELECT status FROM adm_support_messenger WHERE number_anket = "%s"' % number_anket
+        cursor.execute(sql)
+        data = cursor.fetchone()
+        connection.close()
+        return data
+    except:
+        return None
+
+
+def get_support_anket():
+    connection = get_conn()
+    try:
+        cursor = connection.cursor()
+        sql = 'SELECT * FROM adm_support_messenger WHERE status = "Обработка"'
+        cursor.execute(sql)
+        data = cursor.fetchall()
         connection.close()
         return data
     except:

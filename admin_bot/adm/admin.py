@@ -1,6 +1,6 @@
 from django.contrib import admin
-from .models import pre_registration_data, Organization, Admin_profile
-from .forms import Reg_form, Organization_form, Admin_form
+from .models import pre_registration_data, Organization, Admin_profile, logging_message, support_messenger
+from .forms import Reg_form, Organization_form, Admin_form, logging_message_form, support_messenger_form
 
 
 @admin.register(pre_registration_data)
@@ -19,3 +19,15 @@ class Organiz_model(admin.ModelAdmin):
 class Admin_profile_model(admin.ModelAdmin):
     list_display = ('id_tg', 'FIO', 'company')
     form = Admin_form
+
+
+@admin.register(logging_message)
+class logging_message_model(admin.ModelAdmin):
+    list_display = ('id_chat', 'message', 'date')
+    form = logging_message_form
+
+
+@admin.register(support_messenger)
+class support_messenger_model(admin.ModelAdmin):
+    list_display = ('number_anket', 'id_user', 'message', 'status')
+    form = support_messenger_form
