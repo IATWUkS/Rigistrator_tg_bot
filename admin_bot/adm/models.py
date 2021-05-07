@@ -18,7 +18,7 @@ class pre_registration_data(models.Model):
         return f'[{self.id_tg}] {self.surname} {self.name}'
 
     class Meta:
-        verbose_name = 'Аккаунт'
+        verbose_name = 'аккаунт'
         verbose_name_plural = 'Аккаунты'
 
 
@@ -38,7 +38,7 @@ class Organization(models.Model):
         return self.name
 
     class Meta:
-        verbose_name = 'Компания'
+        verbose_name = 'компанию'
         verbose_name_plural = 'Компании'
 
 
@@ -49,7 +49,7 @@ class Admin_profile(models.Model):
     rang = models.TextField(verbose_name='Уровень администратора(1,2)')
 
     class Meta:
-        verbose_name = 'Админ группы'
+        verbose_name = 'админа группы'
         verbose_name_plural = 'Админы группы'
 
     def __str__(self):
@@ -60,12 +60,12 @@ class logging_message(models.Model):
     id_chat = models.TextField(verbose_name='ID чата')
     id_user = models.TextField(verbose_name='ID пользователя')
     message = models.TextField(verbose_name='Сообщение')
-    date = models.DateField(verbose_name='Дата отправки сообщения')
+    date = models.DateTimeField(verbose_name='Дата отправки сообщения')
     name_chat = models.TextField(verbose_name='Названия чата')
     name_user = models.TextField(verbose_name='Имя пользователя')
 
     class Meta:
-        verbose_name = 'Сообщения'
+        verbose_name = 'сообщение'
         verbose_name_plural = 'Сообщения'
 
     def __str__(self):
@@ -80,7 +80,7 @@ class support_messenger(models.Model):
     id_admin = models.TextField(verbose_name='ID админа обрабатывающего заявку')
 
     class Meta:
-        verbose_name = 'Поддержка'
+        verbose_name = 'чат поддержки'
         verbose_name_plural = 'Поддержка'
 
     def __str__(self):
