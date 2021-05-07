@@ -6,11 +6,12 @@ from .models import pre_registration_data, Organization, Admin_profile, logging_
 class support_messenger_form(forms.ModelForm):
     class Meta:
         model = support_messenger
-        fields = ('number_anket', 'id_user', 'message', 'status')
+        fields = ('number_anket', 'id_user', 'message', 'status', 'id_admin')
         widgets = {
             'number_anket': forms.TextInput,
             'id_user': forms.TextInput,
             'status': forms.TextInput,
+            'id_admin': forms.TextInput,
         }
 
 

@@ -77,6 +77,7 @@ class support_messenger(models.Model):
     id_user = models.TextField(verbose_name='ID пользователя')
     message = models.TextField(verbose_name='Сообщение')
     status = models.TextField(verbose_name='Статус')
+    id_admin = models.TextField(verbose_name='ID админа обрабатывающего заявку')
 
     class Meta:
         verbose_name = 'Поддержка'

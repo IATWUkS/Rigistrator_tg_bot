@@ -17,8 +17,9 @@ def get_conn():
 def insert_message_support(number_anket, id_user, message):
     connection = get_conn()
     try:
-        sql = 'INSERT INTO adm_support_messenger(number_anket, id_user, message, status) VALUES ("%s", "%s", "%s", ' \
-              '"Обработка")' % (
+        sql = 'INSERT INTO adm_support_messenger(number_anket, id_user, message, status, id_admin) VALUES ("%s", ' \
+              '"%s", "%s", ' \
+              '"Обработка", "0")' % (
                   number_anket, id_user, message)
         cursor = connection.cursor()
         cursor.execute(sql)
@@ -62,6 +63,15 @@ def input_pre_registration_data(row, values):
         return 400
 
 
+def update_message_support_admin_id(number_anket, id_admin):
+    connection = get_conn()
+    sql = 'UPDATE adm_support_messenger SET id_admin = "%s" WHERE number_anket = "%s" AND id > 0' % (id_admin, number_anket)
+    cursor = connection.cursor()
+    cursor.execute(sql)
+    connection.commit()
+    connection.close()
+
+
 def update_message_support_status(number_anket, status):
     connection = get_conn()
     sql = 'UPDATE adm_support_messenger SET status = "%s" WHERE number_anket = "%s"' % (status, number_anket)
@@ -73,7 +83,8 @@ def update_message_support_status(number_anket, status):
 
 def update_message_support(number_anket, message_content):
     connection = get_conn()
-    sql = 'UPDATE adm_support_messenger SET message = "%s" WHERE number_anket = "%s" AND id > 0' % (message_content, number_anket)
+    sql = 'UPDATE adm_support_messenger SET message = "%s" WHERE number_anket = "%s" AND id > 0' % (
+        message_content, number_anket)
     cursor = connection.cursor()
     cursor.execute(sql)
     connection.commit()
@@ -347,6 +358,19 @@ def get_support_anket():
         sql = 'SELECT * FROM adm_support_messenger WHERE status = "Обработка"'
         cursor.execute(sql)
         data = cursor.fetchall()
+        connection.close()
+        return data
+    except:
+        return None
+
+
+def get_admin_answer_message(number_anket):
+    connection = get_conn()
+    try:
+        cursor = connection.cursor()
+        sql = 'SELECT id_admin FROM adm_support_messenger WHERE number_anket = "%s"' % number_anket
+        cursor.execute(sql)
+        data = cursor.fetchone()
         connection.close()
         return data
     except:

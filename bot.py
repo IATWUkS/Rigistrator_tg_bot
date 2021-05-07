@@ -165,12 +165,12 @@ def callback_query(call):
         data_anket = db_bot.get_support_anket()
         for anket in data_anket:
             status = db_bot.get_status_support(anket['number_anket'])
-            if status['status'] == 'Обработка':
+            if status['status'] == 'Обработка' and anket['id_admin'] == '0' or status['status'] == 'Обработка' and anket['id_admin'] == str(call.message.chat.id):
                 kb = InlineKeyboardMarkup()
                 check_message = InlineKeyboardButton('Ответить',
-                                                         callback_data='check_message_' + anket['number_anket'] + '_' + anket['id_user'])
+                                                         callback_data='check_message_' + anket['number_anket'] + '_' + anket['id_user'] + '_' + anket['id_admin'])
                 kb.add(check_message)
-                data_admin.list_id_anket.append('check_message_' + anket['number_anket'] + '_' + anket['id_user'])
+                data_admin.list_id_anket.append('check_message_' + anket['number_anket'] + '_' + anket['id_user'] + '_' + anket['id_admin'])
                 bot.send_message(call.message.chat.id, 'Номер анкеты:\n%s\n\nСообщение:\n%s' % (anket['number_anket'], anket['message']), reply_markup=kb)
         bot.send_message(call.message.chat.id, '.', reply_markup=kb2)
     if call.data == 'download_message_log':
@@ -686,9 +686,19 @@ def callback_query(call):
     # Ответы на заявки об помощи
     if call.data in data_admin.list_id_anket:
         data_anket = call.data.split('_')
-        msg = bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                    text='Введите ответ:')
-        bot.register_next_step_handler(msg, send_message_user_support, data_anket[3], data_anket[2])
+        admin_answer_id = db_bot.get_admin_answer_message(data_anket[2])
+        if admin_answer_id['id_admin'] == '0':
+            db_bot.update_message_support_admin_id(data_anket[2], data_anket[4])
+        if data_anket[4] == admin_answer_id['id_admin']:
+            msg = bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                        text='Введите ответ:')
+            bot.register_next_step_handler(msg, send_message_user_support, data_anket[3], data_anket[2])
+        else:
+            kb = InlineKeyboardMarkup()
+            menu = InlineKeyboardButton('Меню', callback_data='menu')
+            kb.add(menu)
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                        text='Заявка уже обрабатывается', reply_markup=kb)
     if call.data in data_admin.list_callback_support_send:
         kb = InlineKeyboardMarkup()
         menu = InlineKeyboardButton('Меню', callback_data='menu')
@@ -743,14 +753,14 @@ def callback_query(call):
 
 def send_message_user_support_repeat(message, id_tg, number_anket):
     content_message = message.text
-    kb = InlineKeyboardMarkup()
-    check_message = InlineKeyboardButton('Ответить',
-                                         callback_data='check_message_' + number_anket + '_' + id_tg)
-    kb.add(check_message)
     db_bot.update_message_support(number_anket, content_message)
     bot.send_message(message.chat.id, 'Вашe сообщение отправлено.')
     id_admin = db_bot.get_admin_idtg()
     for ids in id_admin:
+        kb = InlineKeyboardMarkup()
+        check_message = InlineKeyboardButton('Ответить',
+                                             callback_data='check_message_' + number_anket + '_' + id_tg + '_' + ids['id_tg'])
+        kb.add(check_message)
         bot.send_message(ids['id_tg'], 'У вас новое сообщение\n\nСообщение:\n'+content_message, reply_markup=kb)
 
 
@@ -769,16 +779,16 @@ def send_message_user_support(message, id_tg, number_anket):
 def support_message(message):
     number_anket = str(random.randint(100000, 999999999))
     content_message = message.text
-    kb = InlineKeyboardMarkup()
-    check_message = InlineKeyboardButton('Ответить',
-                                         callback_data='check_message_' + number_anket + '_' + str(message.chat.id))
-    kb.add(check_message)
-    data_admin.list_id_anket.append('check_message_' + number_anket + '_' + str(message.chat.id))
     db_bot.insert_message_support(number_anket, message.chat.id, content_message)
     db_bot.update_message_support_status(number_anket, "Обработка")
     bot.send_message(message.chat.id, 'Ваша заявка отправлена.')
     id_admin = db_bot.get_admin_idtg()
     for ids in id_admin:
+        kb = InlineKeyboardMarkup()
+        check_message = InlineKeyboardButton('Ответить',
+                                             callback_data='check_message_' + number_anket + '_' + str(message.chat.id) + '_' + ids['id_tg'])
+        kb.add(check_message)
+        data_admin.list_id_anket.append('check_message_' + number_anket + '_' + str(message.chat.id) + '_' + ids['id_tg'])
         bot.send_message(ids['id_tg'], 'У вас новая заявка\n\nСообщение:\n' + content_message, reply_markup=kb)
 
 
