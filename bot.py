@@ -83,12 +83,14 @@ def message_handler(message):
         kb = InlineKeyboardMarkup()
         start = InlineKeyboardButton('Заполнить', callback_data='registration')
         help = InlineKeyboardButton('Помощь', callback_data='help')
-        kb.add(start)
+        check = db_bot.check_account(message.chat.id)
+        if check != message.chat.id:
+            kb.add(start)
         kb.add(help)
         photo = open('data/06_about.png', 'rb')
+        message_text = db_bot.get_hello_message()
         bot.send_photo(message.chat.id, photo=photo,
-                       caption='Добрый день, я администратор корпоративного портала "Портал".\nДля регистрации прошу '
-                               'заполнить информацию о себе:', reply_markup=kb)
+                       caption=message_text['hello_message'], reply_markup=kb)
 
 
 @bot.message_handler(commands=['help'])
@@ -165,13 +167,18 @@ def callback_query(call):
         data_anket = db_bot.get_support_anket()
         for anket in data_anket:
             status = db_bot.get_status_support(anket['number_anket'])
-            if status['status'] == 'Обработка' and anket['id_admin'] == '0' or status['status'] == 'Обработка' and anket['id_admin'] == str(call.message.chat.id):
+            if status['status'] == 'Обработка' and anket['id_admin'] == '0' or status['status'] == 'Обработка' and \
+                    anket['id_admin'] == str(call.message.chat.id):
                 kb = InlineKeyboardMarkup()
                 check_message = InlineKeyboardButton('Ответить',
-                                                         callback_data='check_message_' + anket['number_anket'] + '_' + anket['id_user'] + '_' + anket['id_admin'])
+                                                     callback_data='check_message_' + anket['number_anket'] + '_' +
+                                                                   anket['id_user'] + '_' + anket['id_admin'])
                 kb.add(check_message)
-                data_admin.list_id_anket.append('check_message_' + anket['number_anket'] + '_' + anket['id_user'] + '_' + anket['id_admin'])
-                bot.send_message(call.message.chat.id, 'Номер анкеты:\n%s\n\nСообщение:\n%s' % (anket['number_anket'], anket['message']), reply_markup=kb)
+                data_admin.list_id_anket.append(
+                    'check_message_' + anket['number_anket'] + '_' + anket['id_user'] + '_' + anket['id_admin'])
+                bot.send_message(call.message.chat.id,
+                                 'Номер анкеты:\n%s\n\nСообщение:\n%s' % (anket['number_anket'], anket['message']),
+                                 reply_markup=kb)
         bot.send_message(call.message.chat.id, '.', reply_markup=kb2)
     if call.data == 'download_message_log':
         kb = InlineKeyboardMarkup()
@@ -230,11 +237,11 @@ def callback_query(call):
             bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=answer[1])
     # Работа с заявками админа своей организации
     if call.data == 'view_anket':
-        kb = InlineKeyboardMarkup()
-        menu = InlineKeyboardButton('меню', callback_data='menu')
-        kb.add(menu)
         data = db_bot.get_info_anket(data_admin.company[str(call.message.chat.id)])
         if str(data) == '()':
+            kb = InlineKeyboardMarkup()
+            menu = InlineKeyboardButton('меню', callback_data='menu')
+            kb.add(menu)
             bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='У вас пока '
                                                                                                          'нет больше '
                                                                                                          'активных '
@@ -291,15 +298,16 @@ def callback_query(call):
                                   text='Ошибка исключенния пользователя ' + name_user[0], reply_markup=kb)
     # Работа с анкетами главного админа
     if call.data == 'view_anket_adm2':
-        kb = InlineKeyboardMarkup()
-        menu = InlineKeyboardButton('Меню', callback_data='menu')
-        kb.add(menu)
         data = db_bot.get_info_anket_admin2()
         if str(data) == '()':
+            kb = InlineKeyboardMarkup()
+            menu = InlineKeyboardButton('Меню', callback_data='menu')
+            kb.add(menu)
             bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                   text='У вас пока нет больше активных заявок.', reply_markup=kb)
         try:
             for data_anket in data:
+                kb = InlineKeyboardMarkup()
                 accept = InlineKeyboardButton('Принять', callback_data='accept_' + str(data_anket['id_tg']))
                 cancel = InlineKeyboardButton('Отклонить', callback_data='cancel_' + str(data_anket['id_tg']))
                 data_admin.accept_list.append('accept_' + str(data_anket['id_tg']))
@@ -689,16 +697,15 @@ def callback_query(call):
         admin_answer_id = db_bot.get_admin_answer_message(data_anket[2])
         if admin_answer_id['id_admin'] == '0':
             db_bot.update_message_support_admin_id(data_anket[2], data_anket[4])
+        admin_answer_id = db_bot.get_admin_answer_message(data_anket[2])
         if data_anket[4] == admin_answer_id['id_admin']:
-            msg = bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                        text='Введите ответ:')
+            msg = bot.send_message(call.message.chat.id, 'Введите ответ:')
             bot.register_next_step_handler(msg, send_message_user_support, data_anket[3], data_anket[2])
         else:
             kb = InlineKeyboardMarkup()
             menu = InlineKeyboardButton('Меню', callback_data='menu')
             kb.add(menu)
-            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                        text='Заявка уже обрабатывается', reply_markup=kb)
+            bot.send_message(call.message.chat.id, 'Заявка уже обрабатывается', reply_markup=kb)
     if call.data in data_admin.list_callback_support_send:
         kb = InlineKeyboardMarkup()
         menu = InlineKeyboardButton('Меню', callback_data='menu')
@@ -706,17 +713,14 @@ def callback_query(call):
         data_anket = call.data.split('_')
         status = db_bot.get_status_support(data_anket[2])
         if status['status'] == 'Обработка':
-            msg = bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                        text='Введите сообщение:')
+            msg = bot.send_message(call.message.chat.id, 'Введите сообщение:')
             bot.register_next_step_handler(msg, send_message_user_support_repeat, data_anket[3], data_anket[2])
         else:
-            msg = bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                        text='Заявка уже обработана.', reply_markup=kb)
+            msg = bot.send_message(call.message.chat.id, 'Заявка уже обработана.', reply_markup=kb)
     if call.data in data_admin.list_callback_support_stop:
         data_anket = call.data.split('_')
         db_bot.update_message_support_status(data_anket[2], "Закончен")
-        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                              text='Диалог завершен.')
+        bot.send_message(call.message.chat.id, 'Диалог завершен.')
     # Автоматическая рассылка
     if call.data == 'auto_mailing':
         kb = InlineKeyboardMarkup()
@@ -749,47 +753,6 @@ def callback_query(call):
                                                                                                      'пользователей '
                                                                                                      'отключена.',
                               reply_markup=kb)
-
-
-def send_message_user_support_repeat(message, id_tg, number_anket):
-    content_message = message.text
-    db_bot.update_message_support(number_anket, content_message)
-    bot.send_message(message.chat.id, 'Вашe сообщение отправлено.')
-    id_admin = db_bot.get_admin_idtg()
-    for ids in id_admin:
-        kb = InlineKeyboardMarkup()
-        check_message = InlineKeyboardButton('Ответить',
-                                             callback_data='check_message_' + number_anket + '_' + id_tg + '_' + ids['id_tg'])
-        kb.add(check_message)
-        bot.send_message(ids['id_tg'], 'У вас новое сообщение\n\nСообщение:\n'+content_message, reply_markup=kb)
-
-
-def send_message_user_support(message, id_tg, number_anket):
-    kb = InlineKeyboardMarkup()
-    send_message = InlineKeyboardButton('Написать',
-                                        callback_data='send_message_' + number_anket + '_' + str(message.chat.id))
-    stop_message = InlineKeyboardButton('Закончить',
-                                        callback_data='stop_message_' + number_anket + '_' + str(message.chat.id))
-    kb.add(send_message, stop_message)
-    data_admin.list_callback_support_send.append('send_message_' + number_anket + '_' + str(message.chat.id))
-    data_admin.list_callback_support_stop.append('stop_message_' + number_anket + '_' + str(message.chat.id))
-    bot.send_message(id_tg, "Ваша заявка "+number_anket+" обработана\nСообщение:\n\n"+message.text, reply_markup=kb)
-
-
-def support_message(message):
-    number_anket = str(random.randint(100000, 999999999))
-    content_message = message.text
-    db_bot.insert_message_support(number_anket, message.chat.id, content_message)
-    db_bot.update_message_support_status(number_anket, "Обработка")
-    bot.send_message(message.chat.id, 'Ваша заявка отправлена.')
-    id_admin = db_bot.get_admin_idtg()
-    for ids in id_admin:
-        kb = InlineKeyboardMarkup()
-        check_message = InlineKeyboardButton('Ответить',
-                                             callback_data='check_message_' + number_anket + '_' + str(message.chat.id) + '_' + ids['id_tg'])
-        kb.add(check_message)
-        data_admin.list_id_anket.append('check_message_' + number_anket + '_' + str(message.chat.id) + '_' + ids['id_tg'])
-        bot.send_message(ids['id_tg'], 'У вас новая заявка\n\nСообщение:\n' + content_message, reply_markup=kb)
 
 
 def upload_history_message_user_step_1(message):
@@ -926,7 +889,248 @@ def send_message_company_user_url(message, id_tg, message_text):
     bot.register_next_step_handler(msg, send_message_company_user_photo, id_tg, url, message_text)
 
 
-@bot.message_handler(content_types=['document', 'audio', 'photo'])
+@bot.message_handler(content_types=['document', 'audio', 'photo', 'voice'])
+def send_message_user_support_repeat(message, id_tg, number_anket):
+    if message.content_type == 'text':
+        content_message = message.text
+        db_bot.update_message_support(number_anket, content_message)
+        bot.send_message(message.chat.id, 'Вашe сообщение отправлено.')
+        id_admin = db_bot.get_admin_idtg()
+        for ids in id_admin:
+            kb = InlineKeyboardMarkup()
+            check_message = InlineKeyboardButton('Ответить',
+                                                 callback_data='check_message_' + number_anket + '_' + id_tg + '_' +
+                                                               ids[
+                                                                   'id_tg'])
+            kb.add(check_message)
+            bot.send_message(ids['id_tg'], 'У вас новое сообщение\n\nСообщение:\n' + content_message, reply_markup=kb)
+    else:
+        if message.content_type == 'photo':
+            content_message = message.caption
+            db_bot.update_message_support(number_anket, content_message)
+            bot.send_message(message.chat.id, 'Вашe сообщение отправлено.')
+            id_admin = db_bot.get_admin_idtg()
+            raw = message.photo[0].file_id
+            name = raw + ".jpg"
+            file_info = bot.get_file(raw)
+            downloaded_file = bot.download_file(file_info.file_path)
+            with open('data/photo_message_user/' + name, 'wb') as new_file:
+                new_file.write(downloaded_file)
+            img = open('data/photo_message_user/' + name, 'rb')
+            for ids in id_admin:
+                kb = InlineKeyboardMarkup()
+                check_message = InlineKeyboardButton('Ответить',
+                                                     callback_data='check_message_' + number_anket + '_' + id_tg + '_' +
+                                                                   ids[
+                                                                       'id_tg'])
+                kb.add(check_message)
+                bot.send_photo(ids['id_tg'], img, 'У вас новое сообщение\n\nСообщение:\n' + content_message,
+                               reply_markup=kb)
+        if message.content_type == 'document':
+            content_message = message.caption
+            db_bot.update_message_support(number_anket, content_message)
+            bot.send_message(message.chat.id, 'Вашe сообщение отправлено.')
+            id_admin = db_bot.get_admin_idtg()
+            file_info = bot.get_file(message.document.file_id)
+            downloaded_file = bot.download_file(file_info.file_path)
+            src = 'data/photo_message_user/' + message.document.file_name
+            with open(src, 'wb') as new_file:
+                new_file.write(downloaded_file)
+            document_send = open('data/photo_message_user/' + message.document.file_name, 'rb')
+            for ids in id_admin:
+                kb = InlineKeyboardMarkup()
+                check_message = InlineKeyboardButton('Ответить',
+                                                     callback_data='check_message_' + number_anket + '_' + id_tg + '_' +
+                                                                   ids[
+                                                                       'id_tg'])
+                kb.add(check_message)
+                bot.send_document(ids['id_tg'], document_send, 'У вас новое сообщение\n\nСообщение:\n' + content_message,
+                               reply_markup=kb)
+        if message.content_type == 'voice':
+            content_message = message.caption
+            db_bot.update_message_support(number_anket, content_message)
+            bot.send_message(message.chat.id, 'Вашe сообщение отправлено.')
+            id_admin = db_bot.get_admin_idtg()
+            file_info = bot.get_file(message.voice.file_id)
+            downloaded_file = bot.download_file(file_info.file_path)
+            with open('data/photo_message_user/' + message.voice.file_name, 'wb') as new_file:
+                new_file.write(downloaded_file)
+            voice_send = open('data/photo_message_user/' + message.voice.file_name, 'rb')
+            for ids in id_admin:
+                kb = InlineKeyboardMarkup()
+                check_message = InlineKeyboardButton('Ответить',
+                                                     callback_data='check_message_' + number_anket + '_' + id_tg + '_' +
+                                                                   ids[
+                                                                       'id_tg'])
+                kb.add(check_message)
+                bot.send_voice(ids['id_tg'], voice_send, 'У вас новое сообщение\n\nСообщение:\n' + content_message,
+                               reply_markup=kb)
+
+
+def send_message_user_support(message, id_tg, number_anket):
+    if message.content_type == 'text':
+        kb = InlineKeyboardMarkup()
+        send_message = InlineKeyboardButton('Написать',
+                                            callback_data='send_message_' + number_anket + '_' + str(message.chat.id))
+        stop_message = InlineKeyboardButton('Закончить',
+                                            callback_data='stop_message_' + number_anket + '_' + str(message.chat.id))
+        kb.add(send_message, stop_message)
+        data_admin.list_callback_support_send.append('send_message_' + number_anket + '_' + str(message.chat.id))
+        data_admin.list_callback_support_stop.append('stop_message_' + number_anket + '_' + str(message.chat.id))
+        bot.send_message(id_tg, "Ваша заявка " + number_anket + " обработана\nСообщение:\n\n" + message.text,
+                         reply_markup=kb)
+    else:
+        if message.content_type == 'photo':
+            kb = InlineKeyboardMarkup()
+            send_message = InlineKeyboardButton('Написать',
+                                                callback_data='send_message_' + number_anket + '_' + str(
+                                                    message.chat.id))
+            stop_message = InlineKeyboardButton('Закончить',
+                                                callback_data='stop_message_' + number_anket + '_' + str(
+                                                    message.chat.id))
+            kb.add(send_message, stop_message)
+            data_admin.list_callback_support_send.append('send_message_' + number_anket + '_' + str(message.chat.id))
+            data_admin.list_callback_support_stop.append('stop_message_' + number_anket + '_' + str(message.chat.id))
+            print(message.photo)
+            raw = message.photo[0].file_id
+            name = raw + ".jpg"
+            file_info = bot.get_file(raw)
+            downloaded_file = bot.download_file(file_info.file_path)
+            with open('data/photo_message_user/' + name, 'wb') as new_file:
+                new_file.write(downloaded_file)
+            img = open('data/photo_message_user/' + name, 'rb')
+            bot.send_photo(id_tg, img, "Ваша заявка " + number_anket + " обработана\nСообщение:\n\n" + message.caption,
+                           reply_markup=kb)
+        if message.content_type == 'document':
+            kb = InlineKeyboardMarkup()
+            send_message = InlineKeyboardButton('Написать',
+                                                callback_data='send_message_' + number_anket + '_' + str(
+                                                    message.chat.id))
+            stop_message = InlineKeyboardButton('Закончить',
+                                                callback_data='stop_message_' + number_anket + '_' + str(
+                                                    message.chat.id))
+            kb.add(send_message, stop_message)
+            data_admin.list_callback_support_send.append('send_message_' + number_anket + '_' + str(message.chat.id))
+            data_admin.list_callback_support_stop.append('stop_message_' + number_anket + '_' + str(message.chat.id))
+            file_info = bot.get_file(message.document.file_id)
+            downloaded_file = bot.download_file(file_info.file_path)
+            src = 'data/photo_message_user/' + message.document.file_name
+            with open(src, 'wb') as new_file:
+                new_file.write(downloaded_file)
+            document_send = open('data/photo_message_user/' + message.document.file_name, 'rb')
+            bot.send_document(id_tg, document_send,
+                              "Ваша заявка " + number_anket + " обработана\nСообщение:\n\n" + message.caption,
+                              reply_markup=kb)
+        if message.content_type == 'voice':
+            kb = InlineKeyboardMarkup()
+            send_message = InlineKeyboardButton('Написать',
+                                                callback_data='send_message_' + number_anket + '_' + str(
+                                                    message.chat.id))
+            stop_message = InlineKeyboardButton('Закончить',
+                                                callback_data='stop_message_' + number_anket + '_' + str(
+                                                    message.chat.id))
+            kb.add(send_message, stop_message)
+            data_admin.list_callback_support_send.append('send_message_' + number_anket + '_' + str(message.chat.id))
+            data_admin.list_callback_support_stop.append('stop_message_' + number_anket + '_' + str(message.chat.id))
+            file_info = bot.get_file(message.voice.file_id)
+            downloaded_file = bot.download_file(file_info.file_path)
+            with open('data/photo_message_user/' + message.voice.file_name, 'wb') as new_file:
+                new_file.write(downloaded_file)
+            voice_send = open('data/photo_message_user/' + message.voice.file_name, 'rb')
+            bot.send_voice(id_tg, voice_send,
+                           "Ваша заявка " + number_anket + " обработана\nСообщение:\n\n" + message.caption,
+                           reply_markup=kb)
+
+
+def support_message(message):
+    if message.content_type == 'text':
+        number_anket = str(random.randint(100000, 999999999))
+        content_message = message.text
+        db_bot.insert_message_support(number_anket, message.chat.id, content_message)
+        db_bot.update_message_support_status(number_anket, "Обработка")
+        bot.send_message(message.chat.id, 'Ваша заявка отправлена.')
+        id_admin = db_bot.get_admin_idtg()
+        for ids in id_admin:
+            kb = InlineKeyboardMarkup()
+            check_message = InlineKeyboardButton('Ответить',
+                                                 callback_data='check_message_' + number_anket + '_' + str(
+                                                     message.chat.id) + '_' + ids['id_tg'])
+            kb.add(check_message)
+            data_admin.list_id_anket.append(
+                'check_message_' + number_anket + '_' + str(message.chat.id) + '_' + ids['id_tg'])
+            bot.send_message(ids['id_tg'], 'У вас новая заявка\n\nСообщение:\n' + content_message, reply_markup=kb)
+    else:
+        if message.content_type == 'photo':
+            number_anket = str(random.randint(100000, 999999999))
+            content_message = message.caption
+            db_bot.insert_message_support(number_anket, message.chat.id, content_message)
+            db_bot.update_message_support_status(number_anket, "Обработка")
+            bot.send_message(message.chat.id, 'Ваша заявка отправлена.')
+            id_admin = db_bot.get_admin_idtg()
+            raw = message.photo[0].file_id
+            name = raw + ".jpg"
+            file_info = bot.get_file(raw)
+            downloaded_file = bot.download_file(file_info.file_path)
+            with open('data/photo_message_user/' + name, 'wb') as new_file:
+                new_file.write(downloaded_file)
+            img = open('data/photo_message_user/' + name, 'rb')
+            for ids in id_admin:
+                kb = InlineKeyboardMarkup()
+                check_message = InlineKeyboardButton('Ответить',
+                                                     callback_data='check_message_' + number_anket + '_' + str(
+                                                         message.chat.id) + '_' + ids['id_tg'])
+                kb.add(check_message)
+                data_admin.list_id_anket.append(
+                    'check_message_' + number_anket + '_' + str(message.chat.id) + '_' + ids['id_tg'])
+                bot.send_photo(ids['id_tg'], img, 'У вас новая заявка\n\nСообщение:\n' + content_message,
+                               reply_markup=kb)
+        if message.content_type == 'document':
+            number_anket = str(random.randint(100000, 999999999))
+            content_message = message.caption
+            db_bot.insert_message_support(number_anket, message.chat.id, content_message)
+            db_bot.update_message_support_status(number_anket, "Обработка")
+            bot.send_message(message.chat.id, 'Ваша заявка отправлена.')
+            id_admin = db_bot.get_admin_idtg()
+            file_info = bot.get_file(message.document.file_id)
+            downloaded_file = bot.download_file(file_info.file_path)
+            src = 'data/photo_message_user/' + message.document.file_name
+            with open(src, 'wb') as new_file:
+                new_file.write(downloaded_file)
+            document_send = open('data/photo_message_user/' + message.document.file_name, 'rb')
+            for ids in id_admin:
+                kb = InlineKeyboardMarkup()
+                check_message = InlineKeyboardButton('Ответить',
+                                                     callback_data='check_message_' + number_anket + '_' + str(
+                                                         message.chat.id) + '_' + ids['id_tg'])
+                kb.add(check_message)
+                data_admin.list_id_anket.append(
+                    'check_message_' + number_anket + '_' + str(message.chat.id) + '_' + ids['id_tg'])
+                bot.send_document(ids['id_tg'], document_send, 'У вас новая заявка\n\nСообщение:\n' + content_message,
+                                  reply_markup=kb)
+        if message.content_type == 'voice':
+            number_anket = str(random.randint(100000, 999999999))
+            content_message = message.caption
+            db_bot.insert_message_support(number_anket, message.chat.id, content_message)
+            db_bot.update_message_support_status(number_anket, "Обработка")
+            bot.send_message(message.chat.id, 'Ваша заявка отправлена.')
+            id_admin = db_bot.get_admin_idtg()
+            file_info = bot.get_file(message.voice.file_id)
+            downloaded_file = bot.download_file(file_info.file_path)
+            with open('data/photo_message_user/' + message.voice.file_name, 'wb') as new_file:
+                new_file.write(downloaded_file)
+            voice_send = open('data/photo_message_user/' + message.voice.file_name, 'rb')
+            for ids in id_admin:
+                kb = InlineKeyboardMarkup()
+                check_message = InlineKeyboardButton('Ответить',
+                                                     callback_data='check_message_' + number_anket + '_' + str(
+                                                         message.chat.id) + '_' + ids['id_tg'])
+                kb.add(check_message)
+                data_admin.list_id_anket.append(
+                    'check_message_' + number_anket + '_' + str(message.chat.id) + '_' + ids['id_tg'])
+                bot.send_voice(voice_send, ids['id_tg'], 'У вас новая заявка\n\nСообщение:\n' + content_message,
+                               reply_markup=kb)
+
+
 def send_message_company_user_photo(message, id_tg, url, message_text):
     try:
         if message.content_type == 'photo':

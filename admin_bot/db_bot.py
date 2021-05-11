@@ -65,7 +65,8 @@ def input_pre_registration_data(row, values):
 
 def update_message_support_admin_id(number_anket, id_admin):
     connection = get_conn()
-    sql = 'UPDATE adm_support_messenger SET id_admin = "%s" WHERE number_anket = "%s" AND id > 0' % (id_admin, number_anket)
+    sql = 'UPDATE adm_support_messenger SET id_admin = "%s" WHERE number_anket = "%s" AND id > 0' % (
+    id_admin, number_anket)
     cursor = connection.cursor()
     cursor.execute(sql)
     connection.commit()
@@ -369,6 +370,19 @@ def get_admin_answer_message(number_anket):
     try:
         cursor = connection.cursor()
         sql = 'SELECT id_admin FROM adm_support_messenger WHERE number_anket = "%s"' % number_anket
+        cursor.execute(sql)
+        data = cursor.fetchone()
+        connection.close()
+        return data
+    except:
+        return None
+
+
+def get_hello_message():
+    connection = get_conn()
+    try:
+        cursor = connection.cursor()
+        sql = 'SELECT * FROM adm_edit_hello_message'
         cursor.execute(sql)
         data = cursor.fetchone()
         connection.close()

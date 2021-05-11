@@ -85,3 +85,11 @@ class support_messenger(models.Model):
 
     def __str__(self):
         return self.number_anket
+
+
+class edit_hello_message(models.Model):
+    hello_message = models.TextField(verbose_name='Начальное сообщение')
+
+    class Meta:
+        verbose_name = 'Изменения текста сообщений'
+        verbose_name_plural = 'Изменения текста сообщений'

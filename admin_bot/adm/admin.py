@@ -1,6 +1,12 @@
 from django.contrib import admin
-from .models import pre_registration_data, Organization, Admin_profile, logging_message, support_messenger
+from .models import pre_registration_data, Organization, Admin_profile, logging_message, support_messenger, \
+    edit_hello_message
 from .forms import Reg_form, Organization_form, Admin_form, logging_message_form, support_messenger_form
+
+
+@admin.register(edit_hello_message)
+class Pre_reg_data(admin.ModelAdmin):
+    list_display = ('hello_message', )
 
 
 @admin.register(pre_registration_data)
